@@ -1,63 +1,68 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CameraController : MonoBehaviour{
     [SerializeField] private GameObject targetGameObject;
-	private Vector3 targetPos;
     [SerializeField] private Vector3 targetPosOffset;
     [SerializeField] private float orbitSpeed;
     [SerializeField] private float orbitDistance;
     [SerializeField] private float zoomSpeed;
     [SerializeField] private float panSpeed;
+    
+    private Vector3 targetPos;
 
     private void Update() {
-	    targetPos = targetGameObject.transform.position + targetPosOffset;
-	    if (Input.GetKey(KeyCode.W)) {
-		    Orbit(Vector3.up);
-	    }
-	    if (Input.GetKey(KeyCode.S)){
-		    Orbit(Vector3.down);
-	    }
-	    if (Input.GetKey(KeyCode.A)){
-		    Orbit(Vector3.left);
-	    }
-	    if (Input.GetKey(KeyCode.D)){
-		    Orbit(Vector3.right);
-	    }
+	    Orbiting();
 	    Zooming();
 	    Panning();
 	    ReapplyDistance();
 	    transform.LookAt(targetPos,transform.up);
     }
 
+    private void Orbiting() {
+	    if (Input.GetKey(KeyCode.W)) {
+		    OrbitInDirection(Vector3.up);
+	    }
+	    else if (Input.GetKey(KeyCode.S)) {
+		    OrbitInDirection(Vector3.down);
+	    }
+	    if (Input.GetKey(KeyCode.A)) {
+		    OrbitInDirection(Vector3.left);
+	    }
+	    else if (Input.GetKey(KeyCode.D)) {
+		    OrbitInDirection(Vector3.right);
+	    }
+    }
+    
+    private void OrbitInDirection(Vector3 direction) {
+	    transform.Translate(orbitSpeed * Time.deltaTime * direction); 
+    }
+
     private void Zooming() {
 	    orbitDistance += Input.GetAxis("Mouse ScrollWheel") * zoomSpeed * -1;
-	    orbitDistance = Mathf.Abs(orbitDistance);
 	    //-1 to inverse scrolling direction
+	    orbitDistance = Mathf.Abs(orbitDistance);
+	    //to avoid orbitDistance going < 0
+	    
     }
 
     private void Panning() {
 	    var initialCameraPos = transform.position;
 	    if (Input.GetKey(KeyCode.Q)) {
-		    transform.Translate(transform.right * -1 * panSpeed * Time.deltaTime);
-		    targetPosOffset = transform.position - initialCameraPos;
+		    transform.Translate(-1 * panSpeed * Time.deltaTime * transform.right);
+		    //multiplying transform.right * -1 because transform.left is unavailable for some strange reason
 	    }
-	    if (Input.GetKey(KeyCode.E)) {
-		    transform.Translate(transform.right * panSpeed * Time.deltaTime);
-		    targetPosOffset = transform.position - initialCameraPos;
+	    else if (Input.GetKey(KeyCode.E)) {
+		    transform.Translate(panSpeed * Time.deltaTime * transform.right);
 	    }
+	    targetPosOffset += transform.position - initialCameraPos;
+	    targetPos = targetGameObject.transform.position + targetPosOffset;
     }
 
-    private void Orbit(Vector3 direction) {
-	    transform.Translate(direction * orbitSpeed * Time.deltaTime); 
-    }
+
 
     private void ReapplyDistance() {
-	    var position = targetPos;
-	    transform.position = (transform.position - position).normalized
-	                         * orbitDistance + position;
+	    transform.position = (transform.position - targetPos).normalized
+	                         * orbitDistance + targetPos;
     }
 
     private void OnDrawGizmos() {
